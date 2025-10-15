@@ -1,0 +1,20 @@
+name: client
+
+services:
+  main:
+    build:
+      context: .
+      target: development
+      args:
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+    working_dir: /home/client/main
+    volumes:
+      - type: bind
+        source: .
+        target: /home/client/main
+    command: sleep infinity
+    tty: true
+    stdin_open: true
+    init: true
+    user: ${UID:-1000}:${GID:-1000}

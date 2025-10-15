@@ -1,0 +1,7 @@
+target
+.git
+.gitignore
+Dockerfile
+AGENTS.md
+CLAUDE.md
+SECURITY.md
