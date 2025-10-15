@@ -1,0 +1,32 @@
+name: Integration
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Format check
+        run: cargo fmt -- --check
+      - name: Lint
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Build
+        run: cargo build --verbose
+      - name: Test
+        run: cargo test --verbose
