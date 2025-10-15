@@ -1,5 +1,5 @@
 fn hw() -> String {
-    return String::from("Hello, Client!");
+    String::from("Hello, Client!")
 }
 
 fn main() {
