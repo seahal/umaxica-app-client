@@ -19,7 +19,8 @@
         "rust-lang.rust-analyzer",
         "tamasfe.even-better-toml",
         "vadimcn.vscode-lldb",
-        "GitHub.codespaces"
+        "GitHub.codespaces",
+        "GitHub.copilot"
       ]
     }
   }

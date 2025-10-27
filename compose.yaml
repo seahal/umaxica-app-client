@@ -1,6 +1,6 @@
 name: client
 
-services:     q
+services:     
   main:
     build:
       context: .
