@@ -8,11 +8,11 @@ services:
       args:
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
-    working_dir: /home/client/main
+    working_dir: /home/client/workspace
     volumes:
       - type: bind
         source: .
-        target: /home/client/main
+        target: /home/client/workspace
     command: sleep infinity
     tty: true
     stdin_open: true

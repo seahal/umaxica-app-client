@@ -20,11 +20,11 @@ RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
 ENV CARGO_HOME=/home/${USERNAME}/.cargo
 ENV PATH=${CARGO_HOME}/bin:${PATH}
 
-RUN mkdir -p "${CARGO_HOME}" /home/${USERNAME}/main \
+RUN mkdir -p "${CARGO_HOME}" /home/${USERNAME}/workspace \
     && chown -R "${USERNAME}:${USERNAME}" "${CARGO_HOME}" /home/${USERNAME} \
     && rustup component add clippy rustfmt
 
-WORKDIR /home/${USERNAME}/main
+WORKDIR /home/${USERNAME}/workspace
 USER ${USERNAME}
 
 # Build stage that compiles the Rust binary with Cargo.
