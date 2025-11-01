@@ -1,4 +1,5 @@
-# umaxica-app-client
+# Umaxica App (CLIENT)
+（ ＾ν＾） Hello, World!
 
 Simple Rust client prototype that prints a greeting. You can run it either with the local toolchain or inside a container image.
 
@@ -8,7 +9,7 @@ Simple Rust client prototype that prints a greeting. You can run it either with 
 cargo run
 ```
 
-## Building the container image
+## Building the container imageCLIENT
 
 ```sh
 docker build -t umaxica-app-client .
@@ -23,3 +24,8 @@ docker run --rm umaxica-app-client
 ```
 
 You should see the `Hello, Client!` message printed to the container logs.
+
+## Known Issues & Limitations
+- This is a work in progress.
+- The public availability of this repository is not guaranteed permanently.
+- No warranty is provided, and the authors shall not be held liable for any damages arising from the use of this repository.

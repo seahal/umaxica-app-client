@@ -1,3 +1,4 @@
+
 {
   "name": "umaxica-app-client",
   "image": "mcr.microsoft.com/devcontainers/rust:1-1-bookworm",
@@ -17,8 +18,9 @@
       "extensions": [
         "rust-lang.rust-analyzer",
         "tamasfe.even-better-toml",
-        "serayuzgur.crates",
-        "vadimcn.vscode-lldb"
+        "vadimcn.vscode-lldb",
+        "GitHub.codespaces",
+        "GitHub.copilot"
       ]
     }
   }

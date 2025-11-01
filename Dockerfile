@@ -1,12 +1,18 @@
-# Development container stage used by docker compose.
-FROM rust:1.79 AS development
-ARG USERNAME=client
-ARG USER_UID=1000
-ARG USER_GID=1000
+ARG RUST_VERSION=1.90
+ARG DEBIAN_VERSION=bookworm-slim
 
+# Base stage shared by development and build targets.
+FROM rust:${RUST_VERSION} AS base
 RUN apt-get update \
     && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates git \
     && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+# Development container stage used by docker compose.
+FROM base AS development
+ARG USERNAME=client
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
     && useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home "${USERNAME}"
@@ -14,18 +20,17 @@ RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
 ENV CARGO_HOME=/home/${USERNAME}/.cargo
 ENV PATH=${CARGO_HOME}/bin:${PATH}
 
-RUN mkdir -p "${CARGO_HOME}" /home/${USERNAME}/main \
+RUN mkdir -p "${CARGO_HOME}" /home/${USERNAME}/workspace \
     && chown -R "${USERNAME}:${USERNAME}" "${CARGO_HOME}" /home/${USERNAME} \
     && rustup component add clippy rustfmt
 
-WORKDIR /home/${USERNAME}/main
+WORKDIR /home/${USERNAME}/workspace
 USER ${USERNAME}
 
-# Build stage that compiles the Rust binary.
-FROM rust:1.79 AS build
-WORKDIR /main
+# Build stage that compiles the Rust binary with Cargo.
+FROM base AS build
 
-# Cache dependencies by building a dummy crate before copying the real sources.
+# Cache dependencies by compiling a placeholder crate before copying sources.
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src \
     && echo "fn main() {}" > src/main.rs \
@@ -35,12 +40,13 @@ RUN mkdir src \
 COPY src ./src
 RUN cargo build --release
 
-FROM debian:bookworm-slim AS runtime
+# Minimal runtime image containing only the compiled binary.
+FROM debian:${DEBIAN_VERSION} AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
-WORKDIR /main
 COPY --from=build /app/target/release/sample /usr/local/bin/sample
 
 CMD ["sample"]
