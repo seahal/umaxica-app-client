@@ -18,11 +18,12 @@ RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
     && useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home "${USERNAME}"
 
 ENV CARGO_HOME=/home/${USERNAME}/.cargo
+ENV RUSTUP_HOME=${CARGO_HOME}
 ENV PATH=${CARGO_HOME}/bin:${PATH}
 
 RUN mkdir -p "${CARGO_HOME}" /home/${USERNAME}/workspace \
     && chown -R "${USERNAME}:${USERNAME}" "${CARGO_HOME}" /home/${USERNAME} \
-    && rustup component add clippy rustfmt
+    && runuser -u "${USERNAME}" -- rustup component add clippy rustfmt
 
 WORKDIR /home/${USERNAME}/workspace
 USER ${USERNAME}

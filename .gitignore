@@ -17,3 +17,5 @@ target/
 .idea/
 .DS_Store
 
+# Cross-compilation build outputs
+builds/

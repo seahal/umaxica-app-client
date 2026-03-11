@@ -1,20 +1,23 @@
 name: client
 
-services:     
-  main:
+services:
+  core:
     build:
       context: .
       target: development
       args:
-        USER_UID: ${UID:-1000}
-        USER_GID: ${GID:-1000}
-    working_dir: /home/client/workspace
+        USERNAME: ${DEV_CONTAINER_USERNAME:-client}
+        USER_UID: ${DEV_CONTAINER_UID:-1000}
+        USER_GID: ${DEV_CONTAINER_GID:-1000}
+    working_dir: /home/${DEV_CONTAINER_USERNAME:-client}/workspace
     volumes:
       - type: bind
         source: .
-        target: /home/client/workspace
+        target: /home/${DEV_CONTAINER_USERNAME:-client}/workspace
     command: sleep infinity
     tty: true
     stdin_open: true
     init: true
-    user: ${UID:-1000}:${GID:-1000}
+    user: ${DEV_CONTAINER_UID:-1000}:${DEV_CONTAINER_GID:-1000}
+    environment:
+      CARGO_HOME: /home/${DEV_CONTAINER_USERNAME:-client}/.cargo
