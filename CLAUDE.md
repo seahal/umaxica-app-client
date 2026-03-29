@@ -1,10 +1,19 @@
+@AGENTS.md
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-This is a Rust application client project named "sample" (version 0.1.0). It's a minimal Rust binary crate with a simple "Hello, Client!" application in `src/main.rs:2`.
+`umaxica-apps-cli` (v0.1.0) — A cross-platform CLI/CDK tool written in Rust with `clap`.
+
+### Target Platforms
+- Linux x86_64 (musl, static binary)
+- Linux aarch64 (musl, static binary)
+- macOS aarch64 (Apple Silicon)
+- Windows x86_64 (MSVC)
+- Windows aarch64 (MSVC)
 
 ## Development Commands
 
@@ -19,17 +28,16 @@ This is a Rust application client project named "sample" (version 0.1.0). It's a
 
 ### Code Quality
 - `cargo fmt` - Format code (standard Rust formatting)
-- `cargo clippy` - Run Rust linter for code improvements
+- `cargo clippy --all-targets --all-features -- -D warnings` - Run Rust linter
 
 ## Architecture
 
-The project follows standard Rust binary crate structure:
-- `src/main.rs` - Entry point with main function
+- `src/main.rs` - Entry point, CLI argument parsing with clap
 - `Cargo.toml` - Project configuration and dependencies
-- No external dependencies currently defined
+- Dependencies: `clap` (v4, with derive feature)
 
 ## CI/CD
 
-GitHub Actions workflow (`.github/workflows/rust.yml:1`) runs on push/PR to main branch:
-- Builds with `cargo build --verbose` 
-- Runs tests with `cargo test --verbose`
+- `.github/workflows/integration.yml` - Format check, clippy, build, test (on ubuntu-latest)
+- `.github/workflows/cross-build.yml` - Cross-platform builds for all 5 target platforms using `cross` for Linux musl targets
+- `.github/workflows/codeql.yml` - Code security analysis

@@ -9,39 +9,50 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  BINARY_NAME: umaxica-apps-cli
 
 jobs:
-  # デスクトップ向けビルド
-  build-desktop:
-    name: Build Desktop - ${{ matrix.target }}
+  build:
+    name: Build - ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux
+          # Linux x86_64 (musl - static binary)
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: sample
-            asset_name: sample-linux-x86_64
+            target: x86_64-unknown-linux-musl
+            artifact_name: umaxica-apps-cli
+            asset_name: umaxica-apps-cli-linux-x86_64
+            cross: true
 
-          # macOS Intel
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: sample
-            asset_name: sample-macos-x86_64
+          # Linux aarch64 (musl - static binary)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            artifact_name: umaxica-apps-cli
+            asset_name: umaxica-apps-cli-linux-aarch64
+            cross: true
 
           # macOS Apple Silicon
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: sample
-            asset_name: sample-macos-aarch64
+            artifact_name: umaxica-apps-cli
+            asset_name: umaxica-apps-cli-macos-aarch64
+            cross: false
 
-          # Windows MSVC
+          # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: sample.exe
-            asset_name: sample-windows-x86_64.exe
+            artifact_name: umaxica-apps-cli.exe
+            asset_name: umaxica-apps-cli-windows-x86_64.exe
+            cross: false
+
+          # Windows aarch64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifact_name: umaxica-apps-cli.exe
+            asset_name: umaxica-apps-cli-windows-aarch64.exe
+            cross: false
 
     steps:
       - name: Checkout code
@@ -52,36 +63,29 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ matrix.target }}
 
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+      # cross を使う Linux ターゲット
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-${{ matrix.target }}-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build with cross
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
 
-      # Linux用の追加依存関係
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libssl-dev
+      # ネイティブビルド
+      - name: Build native
+        if: "!matrix.cross"
+        run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --verbose
-
+      # テスト（クロスコンパイルでない場合のみ）
       - name: Run tests
-        run: cargo test --target ${{ matrix.target }} --verbose
+        if: "!matrix.cross && matrix.target != 'aarch64-pc-windows-msvc'"
+        run: cargo test --target ${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -89,104 +93,9 @@ jobs:
           name: ${{ matrix.asset_name }}
           path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
-  # Android向けビルド
-  build-android:
-    name: Build Android - ${{ matrix.target }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: aarch64-linux-android
-            artifact_name: sample
-            asset_name: sample-android-aarch64
-
-          - target: x86_64-linux-android
-            artifact_name: sample
-            asset_name: sample-android-x86_64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r26c
-
-      - name: Set NDK environment variables
-        run: |
-          echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-          echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-
-      - name: Configure cargo for Android
-        run: |
-          mkdir -p ~/.cargo
-          cat >> ~/.cargo/config.toml << EOF
-          [target.aarch64-linux-android]
-          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang"
-
-          [target.x86_64-linux-android]
-          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android33-clang"
-          EOF
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --verbose
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.asset_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
-
-  # iOS向けビルド（macOS上で実行）
-  build-ios:
-    name: Build iOS - ${{ matrix.target }}
-    runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: aarch64-apple-ios
-            artifact_name: sample
-            asset_name: sample-ios-aarch64
-
-          - target: aarch64-apple-ios-sim
-            artifact_name: sample
-            asset_name: sample-ios-sim-aarch64
-
-          - target: x86_64-apple-ios
-            artifact_name: sample
-            asset_name: sample-ios-sim-x86_64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --verbose
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.asset_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
-
-  # ビルド成果物のサマリー
   build-summary:
     name: Build Summary
-    needs: [build-desktop, build-android, build-ios]
+    needs: [build]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -194,11 +103,9 @@ jobs:
         run: |
           echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Cross-platform build completed!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Supported Platforms" >> $GITHUB_STEP_SUMMARY
-          echo "- Linux (x86_64)" >> $GITHUB_STEP_SUMMARY
-          echo "- macOS (x86_64, Apple Silicon)" >> $GITHUB_STEP_SUMMARY
-          echo "- Windows (x86_64)" >> $GITHUB_STEP_SUMMARY
-          echo "- Android (aarch64, x86_64)" >> $GITHUB_STEP_SUMMARY
-          echo "- iOS (aarch64, simulator)" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux x86_64 (musl, static)" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux aarch64 (musl, static)" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS aarch64 (Apple Silicon)" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows x86_64" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows aarch64" >> $GITHUB_STEP_SUMMARY
