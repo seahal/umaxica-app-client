@@ -10,6 +10,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BINARY_NAME: umaxica-apps-cli
+  # Dockerfile の LLVM_MINGW_VERSION と揃えること。
+  LLVM_MINGW_VERSION: "20260616"
 
 jobs:
   build:
@@ -40,16 +42,16 @@ jobs:
             asset_name: umaxica-apps-cli-macos-aarch64
             cross: false
 
-          # Windows x86_64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
+          # Windows x86_64 (gnullvm / llvm-mingw クロスビルド)
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnullvm
             artifact_name: umaxica-apps-cli.exe
             asset_name: umaxica-apps-cli-windows-x86_64.exe
             cross: false
 
-          # Windows aarch64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
+          # Windows aarch64 (gnullvm / llvm-mingw クロスビルド)
+          - os: ubuntu-latest
+            target: aarch64-pc-windows-gnullvm
             artifact_name: umaxica-apps-cli.exe
             asset_name: umaxica-apps-cli-windows-aarch64.exe
             cross: false
@@ -68,6 +70,17 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
+      # Windows (gnullvm) 向け LLVM/MinGW ツールチェーン
+      - name: Install llvm-mingw
+        if: contains(matrix.target, 'gnullvm')
+        run: |
+          set -eux
+          url="https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+          curl -fsSL "$url" -o /tmp/llvm-mingw.tar.xz
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -xJf /tmp/llvm-mingw.tar.xz -C /opt/llvm-mingw --strip-components=1
+          echo "/opt/llvm-mingw/bin" >> "$GITHUB_PATH"
+
       # cross を使う Linux ターゲット
       - name: Install cross
         if: matrix.cross
@@ -82,9 +95,9 @@ jobs:
         if: "!matrix.cross"
         run: cargo build --release --target ${{ matrix.target }}
 
-      # テスト（クロスコンパイルでない場合のみ）
+      # テスト（ホスト上で実行できるターゲットのみ）
       - name: Run tests
-        if: "!matrix.cross && matrix.target != 'aarch64-pc-windows-msvc'"
+        if: "!matrix.cross && !contains(matrix.target, 'gnullvm')"
         run: cargo test --target ${{ matrix.target }}
 
       - name: Upload artifact
@@ -107,5 +120,7 @@ jobs:
           echo "- Linux x86_64 (musl, static)" >> $GITHUB_STEP_SUMMARY
           echo "- Linux aarch64 (musl, static)" >> $GITHUB_STEP_SUMMARY
           echo "- macOS aarch64 (Apple Silicon)" >> $GITHUB_STEP_SUMMARY
-          echo "- Windows x86_64" >> $GITHUB_STEP_SUMMARY
-          echo "- Windows aarch64" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows x86_64 (gnullvm, cross-built on Linux)" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows aarch64 (gnullvm, cross-built on Linux)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Windows ターゲットは Linux 上でクロスビルドするため、CI ではテストを実行しません。" >> $GITHUB_STEP_SUMMARY

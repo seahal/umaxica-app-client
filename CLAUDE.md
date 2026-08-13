@@ -12,8 +12,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Linux x86_64 (musl, static binary)
 - Linux aarch64 (musl, static binary)
 - macOS aarch64 (Apple Silicon)
-- Windows x86_64 (MSVC)
-- Windows aarch64 (MSVC)
+- Windows x86_64 (gnullvm, cross-built on Linux with llvm-mingw)
+- Windows aarch64 (gnullvm, cross-built on Linux with llvm-mingw)
 
 ## Development Commands
 
@@ -39,5 +39,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## CI/CD
 
 - `.github/workflows/integration.yml` - Format check, clippy, build, test (on ubuntu-latest)
-- `.github/workflows/cross-build.yml` - Cross-platform builds for all 5 target platforms using `cross` for Linux musl targets
+- `.github/workflows/cross-build.yml` - Cross-platform builds for all 5 target platforms; `cross` for Linux musl targets, llvm-mingw for the Windows gnullvm targets
 - `.github/workflows/codeql.yml` - Code security analysis

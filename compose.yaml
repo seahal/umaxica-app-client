@@ -21,3 +21,11 @@ services:
     user: ${DEV_CONTAINER_UID:-1000}:${DEV_CONTAINER_GID:-1000}
     environment:
       CARGO_HOME: /home/${DEV_CONTAINER_USERNAME:-client}/.cargo
+    networks:
+      outer:
+        aliases:
+          - client
+
+networks:
+  outer:
+    external: true

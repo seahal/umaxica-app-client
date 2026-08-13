@@ -1,11 +1,25 @@
 ARG RUST_VERSION=1.90
 ARG DEBIAN_VERSION=bookworm-slim
+# .github/workflows/cross-build.yml の LLVM_MINGW_VERSION と揃えること。
+ARG LLVM_MINGW_VERSION=20260616
 
 # Base stage shared by development and build targets.
 FROM rust:${RUST_VERSION} AS base
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates git \
+    && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates git curl xz-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Windows (gnullvm) 向けクロスコンパイル用ツールチェーン。
+ARG LLVM_MINGW_VERSION
+RUN set -eux; \
+    arch="$(uname -m)"; \
+    url="https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-ubuntu-22.04-${arch}.tar.xz"; \
+    curl -fsSL "$url" -o /tmp/llvm-mingw.tar.xz; \
+    mkdir -p /opt/llvm-mingw; \
+    tar -xJf /tmp/llvm-mingw.tar.xz -C /opt/llvm-mingw --strip-components=1; \
+    rm /tmp/llvm-mingw.tar.xz
+ENV PATH=/opt/llvm-mingw/bin:${PATH}
+
 WORKDIR /app
 
 # Development container stage used by docker compose.
@@ -18,12 +32,12 @@ RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
     && useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home "${USERNAME}"
 
 ENV CARGO_HOME=/home/${USERNAME}/.cargo
-ENV RUSTUP_HOME=${CARGO_HOME}
 ENV PATH=${CARGO_HOME}/bin:${PATH}
 
 RUN mkdir -p "${CARGO_HOME}" /home/${USERNAME}/workspace \
     && chown -R "${USERNAME}:${USERNAME}" "${CARGO_HOME}" /home/${USERNAME} \
-    && runuser -u "${USERNAME}" -- rustup component add clippy rustfmt
+    && runuser -u "${USERNAME}" -- rustup component add clippy rustfmt \
+    && runuser -u "${USERNAME}" -- rustup target add x86_64-pc-windows-gnullvm aarch64-pc-windows-gnullvm
 
 WORKDIR /home/${USERNAME}/workspace
 USER ${USERNAME}
@@ -48,6 +62,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-COPY --from=build /app/target/release/sample /usr/local/bin/sample
+COPY --from=build /app/target/release/umaxica-apps-cli /usr/local/bin/umaxica-apps-cli
 
-CMD ["sample"]
+CMD ["umaxica-apps-cli"]
